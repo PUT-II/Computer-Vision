@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Dict
 
 import cv2 as cv
 import numpy as np
@@ -14,18 +14,23 @@ class Dataset:
         self.images = []
 
     def solve(self):
-        for image in self.images:
+        images_points: Dict[int, list] = {}
+        for i, image in enumerate(self.images):
             contours, hierarchy = cv.findContours(image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-            new_contours = []
-            for cnt in contours:
-                epsilon = 0.015 * cv.arcLength(cnt, True)
-                approx = cv.approxPolyDP(cnt, epsilon, True)
-                new_contours.append(approx)
+            epsilon = 0.015 * cv.arcLength(contours[0], True)
+            approx = cv.approxPolyDP(contours[0], epsilon, True)
+            if len(approx) not in images_points.keys():
+                images_points[len(approx)] = [i]
+            else:
+                images_points[len(approx)] += [i]
 
             img_copy = cv.cvtColor(image.copy(), cv.COLOR_GRAY2BGR)
-            cv.drawContours(img_copy, new_contours, 0, color=(0, 0, 255), thickness=3)
+            cv.drawContours(img_copy, [approx], 0, color=(0, 0, 255), thickness=3)
             cv.imshow("test", img_copy)
             cv.waitKey()
+        print(images_points)
+        # for i in images_points:
+
 
     @staticmethod
     def load(directory: str):
