@@ -25,41 +25,51 @@ class Dataset:
     def __init__(self):
         self.correct = {}
         self.images = []
+        self.edge_lengths: Dict[int, float] = {}
+
+    def approx_fit(self, contours, i):
+        epsilon = 0.015 * cv.arcLength(contours[0], closed=True)
+        approx = cv.approxPolyDP(contours[0], epsilon, closed=True)
+        longest_edge = 0.0
+        for j in range(len(approx) - 1):
+            length = calculate_length(approx[j][0], approx[j + 1][0])
+            if length > longest_edge:
+                longest_edge = length
+        self.edge_lengths[i] = round(longest_edge, 3)
+        return approx
 
     def solve(self):
-        images_points: Dict[int, list] = {}
-        edge_lengths: Dict[int, float] = {}
+        approx_points: Dict[int, list] = {}
+        area_points: Dict[int, list] = {}
 
         for i, image in enumerate(self.images):
             contours, hierarchy = cv.findContours(image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-            epsilon = 0.06 * cv.arcLength(contours[0], closed=True)
-            approx = cv.approxPolyDP(contours[0], epsilon, closed=True)
+            approx = self.approx_fit(contours, i)
+            area = cv.contourArea(approx)
 
-            longest_edge = 0.0
-            for j in range(len(approx) - 1):
-                length = calculate_length(approx[j][0], approx[j + 1][0])
-                if length > longest_edge:
-                    longest_edge = length
-            edge_lengths[i] = round(longest_edge, 3)
-
-            if len(approx) not in images_points.keys():
-                images_points[len(approx)] = [i]
+            if len(approx) not in approx_points.keys():
+                approx_points[len(approx)] = [i]
             else:
-                images_points[len(approx)] += [i]
+                approx_points[len(approx)] += [i]
+
+            if area not in area_points.keys():
+                area_points[area] = [i]
+            else:
+                area_points[area] += [i]
 
             img_copy = cv.cvtColor(image.copy(), cv.COLOR_GRAY2BGR)
             cv.drawContours(img_copy, [approx], 0, color=(0, 0, 255), thickness=2)
             if Dataset.SHOW_IMAGES:
                 cv.imshow("test", img_copy)
                 cv.waitKey()
-
-        print()
-        print(edge_lengths)
-        print()
+        print(f"Area_points: {area_points}")
+        # print()
+        # print(self.edge_lengths)
+        # print()
         # print(images_points)
         result = {}
         remaining = []
-        for elem in images_points.values():
+        for elem in approx_points.values():
             if len(elem) == 2:
                 result[elem[0]] = elem[1]
                 result[elem[1]] = elem[0]
@@ -74,7 +84,7 @@ class Dataset:
         print(f"Result : {result}")
         score = 0
         for result_key, correct_key in zip(sorted(result), self.correct):
-            if result[result_key] != self.correct[correct_key]:
+            if result[result_key] == self.correct[correct_key]:
                 score += 1
         score /= len(self.correct)
         print(f"Score : {score}")
