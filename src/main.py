@@ -12,6 +12,26 @@ def calculate_length(point1, point2):
 def preprocess_image(img: np.ndarray) -> np.ndarray:
     res_img = img.copy()
     _, res_img = cv.threshold(res_img, 127, 255, cv.THRESH_BINARY)
+    contours, _ = cv.findContours(res_img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+    x, y, w, h = cv.boundingRect(contours[0])
+    res_img = res_img[y:y + h, x:x + w]
+
+    img_h, img_w = res_img.shape
+    scale_x = img_w / 496
+    scale_y = img_h / 496
+
+    scale = scale_y if scale_x < scale_y else scale_x
+
+    new_width = round(img_w / scale)
+    new_height = round(img_h / scale)
+    res_img = cv.resize(res_img, (new_width, new_height))
+    _, res_img = cv.threshold(res_img, 127, 255, cv.THRESH_BINARY)
+
+    pad_x = round((512 - new_width) / 2)
+    pad_y = round((512 - new_height) / 2)
+    res_img = cv.copyMakeBorder(res_img, pad_y, pad_y, pad_x, pad_x, cv.BORDER_CONSTANT)
+    res_img = cv.resize(res_img, (512, 512))
 
     return res_img
 
@@ -28,7 +48,7 @@ class Dataset:
         self.edge_lengths: Dict[int, float] = {}
 
     def approx_fit(self, contours, i):
-        epsilon = 0.015 * cv.arcLength(contours[0], closed=True)
+        epsilon = 0.005 * cv.arcLength(contours[0], closed=True)
         approx = cv.approxPolyDP(contours[0], epsilon, closed=True)
         longest_edge = 0.0
         for j in range(len(approx) - 1):
@@ -39,6 +59,7 @@ class Dataset:
         return approx
 
     def solve(self):
+        print()
         approx_points: Dict[int, list] = {}
         area_points: Dict[int, list] = {}
 
@@ -52,16 +73,14 @@ class Dataset:
             else:
                 approx_points[len(approx)] += [i]
 
-            if area not in area_points.keys():
-                area_points[area] = [i]
-            else:
-                area_points[area] += [i]
+            area_points[i] = area
 
             img_copy = cv.cvtColor(image.copy(), cv.COLOR_GRAY2BGR)
             cv.drawContours(img_copy, [approx], 0, color=(0, 0, 255), thickness=2)
             if Dataset.SHOW_IMAGES:
                 cv.imshow("test", img_copy)
                 cv.waitKey()
+        print(f"Vertices: {approx_points}")
         print(f"Area_points: {area_points}")
         # print()
         # print(self.edge_lengths)
@@ -115,14 +134,14 @@ class Dataset:
 
 
 def main():
-    # dataset = Dataset.load(f"./datasets/A/set2/")
-    # dataset.solve()
+    dataset = Dataset.load(f"./datasets/A/set1/")
+    dataset.solve()
 
-    for i in range(7):
-        print(f"Dataset {i}", end="\t")
-        dataset = Dataset.load(f"./datasets/A/set{i}/")
-        dataset.solve()
-    cv.destroyAllWindows()
+    # for i in range(7):
+    #     print(f"Dataset {i}", end="\t")
+    #     dataset = Dataset.load(f"./datasets/A/set{i}/")
+    #     dataset.solve()
+    # cv.destroyAllWindows()
 
 
 if __name__ == '__main__':
