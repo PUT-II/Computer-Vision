@@ -2,6 +2,7 @@ import os
 from typing import List, Dict
 
 import cv2 as cv
+import imutils
 import numpy as np
 
 
@@ -14,10 +15,18 @@ def preprocess_image(img: np.ndarray) -> np.ndarray:
     _, res_img = cv.threshold(res_img, 127, 255, cv.THRESH_BINARY)
     contours, _ = cv.findContours(res_img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
+    # gray = cv.GaussianBlur(res_img, (3, 3), 0)
+    # mask = np.zeros(gray.shape, dtype="uint8")
+    # cv.drawContours(mask, [contours[0]], -1, 255, -1)
+
     x, y, w, h = cv.boundingRect(contours[0])
     res_img = res_img[y:y + h, x:x + w]
-
-    img_h, img_w = res_img.shape
+    # maskROI = mask[y:y + h, x:x + w]
+    # imageROI = cv.bitwise_and(res_img, res_img, mask=maskROI)
+    # rot_img = imutils.rotate_bound(imageROI, 50)
+    rot_img = res_img
+    
+    img_h, img_w = rot_img.shape
     scale_x = img_w / 496
     scale_y = img_h / 496
 
@@ -25,16 +34,24 @@ def preprocess_image(img: np.ndarray) -> np.ndarray:
 
     new_width = round(img_w / scale)
     new_height = round(img_h / scale)
-    res_img = cv.resize(res_img, (new_width, new_height))
-    _, res_img = cv.threshold(res_img, 127, 255, cv.THRESH_BINARY)
+    rot_img = cv.resize(rot_img, (new_width, new_height))
+    _, rot_img = cv.threshold(rot_img, 127, 255, cv.THRESH_BINARY)
 
     pad_x = round((512 - new_width) / 2)
     pad_y = round((512 - new_height) / 2)
-    res_img = cv.copyMakeBorder(res_img, pad_y, pad_y, pad_x, pad_x, cv.BORDER_CONSTANT)
-    res_img = cv.resize(res_img, (512, 512))
+    rot_img = cv.copyMakeBorder(rot_img, pad_y, pad_y, pad_x, pad_x, cv.BORDER_CONSTANT)
+    rot_img = cv.resize(rot_img, (512, 512))
 
-    return res_img
+    return rot_img
 
+
+def calculate_longest_dege(contour):
+    longest_edge = 0.0
+    for j in range(len(contour) - 1):
+        length = calculate_length(contour[j][0], contour[j + 1][0])
+        if length > longest_edge:
+            longest_edge = length
+    return longest_edge
 
 class Dataset:
     SHOW_IMAGES_ON_LOAD = False
@@ -50,12 +67,6 @@ class Dataset:
     def approx_fit(self, contours, i):
         epsilon = 0.005 * cv.arcLength(contours[0], closed=True)
         approx = cv.approxPolyDP(contours[0], epsilon, closed=True)
-        longest_edge = 0.0
-        for j in range(len(approx) - 1):
-            length = calculate_length(approx[j][0], approx[j + 1][0])
-            if length > longest_edge:
-                longest_edge = length
-        self.edge_lengths[i] = round(longest_edge, 3)
         return approx
 
     def solve(self):
