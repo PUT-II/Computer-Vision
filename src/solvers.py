@@ -120,26 +120,6 @@ class DistanceToBaseDatasetSolver(DatasetSolver):
     VERBOSE = False
 
     @staticmethod
-    def __set_cut_edge(fragment):
-        cut_ends = set()
-        for i in fragment.sides[0] + fragment.sides[1]:
-            if i not in fragment.base:
-                cut_ends.add(fragment.approx[i])
-
-        start_adding: bool = False
-        cut_side = []
-
-        for point in fragment.contour:
-            if start_adding:
-                cut_side.append(point)
-
-            if point in cut_ends and start_adding:
-                break
-            elif point in cut_ends:
-                start_adding = True
-        return cut_side
-
-    @staticmethod
     def distance_to_base(base_point1, base_point2, cut_edge_point):
         def distance(p0, p1):
             return math.sqrt((p0[0] - p1[0]) ** 2 + (p0[1] - p1[1]) ** 2)
@@ -152,6 +132,7 @@ class DistanceToBaseDatasetSolver(DatasetSolver):
         return (2*area)/base_length
 
     def solve(self) -> float:
+
         metadata_list: List[FragmentMetadata] = []
         for i, image in enumerate(self.images):
             metadata = Fragment.get_metadata(image)
@@ -167,12 +148,11 @@ class DistanceToBaseDatasetSolver(DatasetSolver):
         for i, metadata in enumerate(metadata_list):
             print(f"Fragment {i}")
             distances_matches[i] = {}
-            cut_points = self.__set_cut_edge(metadata)
             base_point1 = metadata.contour[metadata.base[0]]
             base_point2 = metadata.contour[metadata.base[1]]
             j = 0
-            for point in cut_points:
-                distance = self.distance_to_base(base_point1, base_point2, point)
+            for cut_point in metadata.normalized_cut_points:
+                distance = self.distance_to_base(base_point1, base_point2, cut_point)
                 distances_matches[i][j] = round(distance, 2)
                 j += 1
             print(distances_matches[i])

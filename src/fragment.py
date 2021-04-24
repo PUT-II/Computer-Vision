@@ -16,6 +16,7 @@ class FragmentMetadata:
 
     cut_angles: List[float]
     normalized_cut_length: float
+    normalized_cut_points: List[Tuple[int, int]] = []
 
     def __init__(self, base: Tuple[int, int], sides: tuple, image: np.ndarray, contour: np.ndarray, approx: np.ndarray):
         self.base = base
@@ -29,6 +30,7 @@ class FragmentMetadata:
 
         if len(self.approx) >= 4:
             self.__set_cut_edge()
+            self.__set_normalized_cut_points(50)
             self.__calculate_angle_gradient()
         else:
             self.gradient = 0.0
@@ -89,9 +91,7 @@ class FragmentMetadata:
 
         cv.waitKey()
 
-    def __calculate_angle_gradient(self):
-        gradient_size = 50
-
+    def __set_normalized_cut_points(self, gradient_size):
         cut_edge_points = self.cut_edge
         cut_edge_points = list(sorted(cut_edge_points, key=lambda point: point[0]))
 
@@ -129,7 +129,10 @@ class FragmentMetadata:
             points.append((int(round(x, 5)), int(round(y, 5))))
             if len(points) >= gradient_size:
                 break
+        self.normalized_cut_points = points
 
+    def __calculate_angle_gradient(self):
+        points = self.normalized_cut_points
         angles = calculate_angles(points)
         gradient = np.array(angles, dtype=np.float)
         if len(angles) != 0:
