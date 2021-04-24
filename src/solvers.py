@@ -27,6 +27,10 @@ class DatasetSolver(ABC):
         pass
 
     @staticmethod
+    def load(directory: str):
+        pass
+
+    @staticmethod
     def _load_instance(instance, directory: str):
         instance = instance
 
