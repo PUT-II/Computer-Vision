@@ -1,6 +1,9 @@
 import math
 from typing import List, Tuple
 
+import cv2 as cv
+import numpy as np
+
 
 def get_longest_line_points(contour) -> Tuple[Tuple[int, int], Tuple[int, int]]:
     """ Finds longest line in contour
@@ -41,3 +44,15 @@ def calculate_angles(contour: List[Tuple[int, int]]) -> List[float]:
         angles.append(round(angle, 2))
 
     return angles
+
+
+def find_contour(image: np.ndarray) -> np.ndarray:
+    contours, _ = cv.findContours(image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+    longest_contour = max(contours, key=lambda contour: len(contour))
+    return longest_contour
+
+
+def find_contour_tuples(image: np.ndarray) -> List[Tuple[int, int]]:
+    contour = find_contour(image)
+    return [tuple(point[0]) for point in contour]

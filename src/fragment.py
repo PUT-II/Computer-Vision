@@ -4,7 +4,7 @@ from typing import Tuple, List
 import cv2 as cv
 import numpy as np
 
-from src.utils import calculate_length, calculate_angles
+from src.utils import calculate_length, calculate_angles, find_contour
 
 
 class FragmentMetadata:
@@ -184,8 +184,7 @@ class FragmentMetadata:
 class Fragment:
     @staticmethod
     def get_metadata(image: np.ndarray) -> FragmentMetadata:
-        contour, hierarchy = cv.findContours(image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        contour = contour[0]
+        contour = find_contour(image)
 
         epsilon = 0.005 * cv.arcLength(contour, closed=True)
         approx = cv.approxPolyDP(contour, epsilon, closed=True)

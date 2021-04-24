@@ -2,13 +2,11 @@ from typing import List
 
 import numpy as np
 
-from src.solvers import AngleGradientDatasetSolver, DatasetSolver, DistanceToBaseDatasetSolver
+from src.solvers import DatasetSolver, DistanceToBaseDatasetSolver
 
 
 def get_datasets_scores(datasets: List[DatasetSolver]):
     scores = list()
-    # datasets = [datasets[1]]
-    # datasets = datasets[1:]
     for dataset in datasets:
         scores.append(dataset.solve())
 
@@ -19,7 +17,13 @@ def get_datasets_scores(datasets: List[DatasetSolver]):
 
 
 def main():
-    datasets: List[DatasetSolver] = [DistanceToBaseDatasetSolver.load(f"./datasets/A/set{i}/") for i in range(8 + 1)]
+    dataset_name = "A"
+    dataset_size = 9
+    dataset_start_index = 0
+
+    set_range = range(dataset_start_index, dataset_size)
+    datasets: List[DatasetSolver] = \
+        [DistanceToBaseDatasetSolver.load(f"./datasets/{dataset_name}/set{i}/") for i in set_range]
 
     get_datasets_scores(datasets)
 
