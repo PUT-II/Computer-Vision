@@ -1,17 +1,19 @@
 import json
 import os
-from typing import List, Dict
+from abc import ABC, abstractmethod
+from typing import Dict, List
 
 import cv2 as cv
 import numpy as np
 
-from src.fragment import Fragment, FragmentMetadata
+from src.fragment import Fragment
+from src.fragment import FragmentMetadata
 from src.preprocessing import preprocess_image
 
 
-class Dataset:
+class DatasetSolver(ABC):
     SHOW_IMAGES_ON_LOAD = False
-    VERBOSE = False
+
     correct: dict
     images: List[np.ndarray]
 
@@ -20,13 +22,48 @@ class Dataset:
         self.images = []
         self.edge_lengths: Dict[int, float] = {}
 
-    def solve(self):
+    @abstractmethod
+    def solve(self) -> float:
+        pass
+
+    @staticmethod
+    def _load_instance(instance, directory: str):
+        instance = instance
+
+        with open(f"{directory}correct.txt", mode="r") as file:
+            lines: List[str] = file.readlines()
+        for i in range(len(lines)):
+            instance.correct[i] = int(lines[i])
+
+        filenames: List[str] = os.listdir(directory)
+        filename_numbers = [int(filename.replace(".png", "")) for filename in filenames if filename != "correct.txt"]
+        for filename_number in sorted(filename_numbers):
+            filename = f"{filename_number}.png"
+            file_path = f"{directory}{filename}"
+
+            img: np.ndarray = cv.imread(file_path, cv.IMREAD_GRAYSCALE)
+            img = preprocess_image(img)
+
+            if DatasetSolver.SHOW_IMAGES_ON_LOAD:
+                print(file_path)
+                cv.imshow("test", img)
+                cv.waitKey()
+
+            instance.images.append(img)
+
+        return instance
+
+
+class AngleGradientDatasetSolver(DatasetSolver):
+    VERBOSE = False
+
+    def solve(self) -> float:
         metadata_list: List[FragmentMetadata] = []
         for i, image in enumerate(self.images):
             metadata = Fragment.get_metadata(image)
             metadata_list.append(metadata)
 
-        if Dataset.VERBOSE:
+        if self.VERBOSE:
             for i, metadata in enumerate(metadata_list):
                 print(f"Fragment {i}")
                 print(metadata.gradient)
@@ -54,7 +91,7 @@ class Dataset:
                     result[key] = match
                     break
 
-        if Dataset.VERBOSE:
+        if self.VERBOSE:
             print(json.dumps(grade_matches, indent=1))
             print(f"Correct : {self.correct}")
             print(f"Result : {result}")
@@ -70,28 +107,5 @@ class Dataset:
         return round(score, 4)
 
     @staticmethod
-    def load(directory: str):
-        result = Dataset()
-
-        with open(f"{directory}correct.txt", mode="r") as file:
-            lines: List[str] = file.readlines()
-        for i in range(len(lines)):
-            result.correct[i] = int(lines[i])
-
-        filenames: List[str] = os.listdir(directory)
-        filename_numbers = [int(filename.replace(".png", "")) for filename in filenames if filename != "correct.txt"]
-        for filename_number in sorted(filename_numbers):
-            filename = f"{filename_number}.png"
-            file_path = f"{directory}{filename}"
-
-            img: np.ndarray = cv.imread(file_path, cv.IMREAD_GRAYSCALE)
-            img = preprocess_image(img)
-
-            if Dataset.SHOW_IMAGES_ON_LOAD:
-                print(file_path)
-                cv.imshow("test", img)
-                cv.waitKey()
-
-            result.images.append(img)
-
-        return result
+    def load(directory: str) -> DatasetSolver:
+        return DatasetSolver._load_instance(AngleGradientDatasetSolver(), directory)

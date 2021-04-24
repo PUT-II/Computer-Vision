@@ -2,10 +2,10 @@ from typing import List
 
 import numpy as np
 
-from src.dataset import Dataset
+from src.solvers import AngleGradientDatasetSolver, DatasetSolver
 
 
-def get_datasets_scores(datasets: List[Dataset]):
+def get_datasets_scores(datasets: List[DatasetSolver]):
     scores = list()
     # datasets = [datasets[1]]
     # datasets = datasets[1:]
@@ -19,7 +19,7 @@ def get_datasets_scores(datasets: List[Dataset]):
 
 
 def main():
-    datasets: List[Dataset] = [Dataset.load(f"./datasets/A/set{i}/") for i in range(8 + 1)]
+    datasets: List[DatasetSolver] = [AngleGradientDatasetSolver.load(f"./datasets/A/set{i}/") for i in range(8 + 1)]
 
     get_datasets_scores(datasets)
 
