@@ -2,7 +2,7 @@ from typing import List
 
 import numpy as np
 
-from src.solvers import AngleGradientDatasetSolver, DatasetSolver
+from src.solvers import AngleGradientDatasetSolver, DatasetSolver, DistanceToBaseDatasetSolver
 
 
 def get_datasets_scores(datasets: List[DatasetSolver]):
@@ -19,7 +19,7 @@ def get_datasets_scores(datasets: List[DatasetSolver]):
 
 
 def main():
-    datasets: List[DatasetSolver] = [AngleGradientDatasetSolver.load(f"./datasets/A/set{i}/") for i in range(8 + 1)]
+    datasets: List[DatasetSolver] = [DistanceToBaseDatasetSolver.load(f"./datasets/A/set{i}/") for i in range(8 + 1)]
 
     get_datasets_scores(datasets)
 
