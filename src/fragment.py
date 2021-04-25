@@ -14,10 +14,10 @@ class FragmentMetadata:
     contour: List[Tuple[int, int]]
     approx: List[Tuple[int, int]]
 
-    normalized_cut_length: float
-    normalized_cut_points: List[Tuple[int, int]]
+    distance_to_base_array: np.array
 
-    def __init__(self, base: Tuple[int, int], sides: tuple, image: np.ndarray, contour: np.ndarray, approx: np.ndarray):
+    def __init__(self, base: Tuple[int, int], sides: tuple, image: np.ndarray, contour: np.ndarray, approx: np.ndarray,
+                 cut_point_count: int = 50):
         self.base_points = base
         self.sides = sides
 
@@ -27,9 +27,9 @@ class FragmentMetadata:
 
         self.image = image
 
-        self.__set_cut_edge()
-        self.normalized_cut_points = self.__generate_normalized_cut_points(50)
-        self.distance_matches = self.__generate_cut_distances()
+        self.cut_edge = self.__generate_cut_edge()
+        normalized_cut_points = self.__generate_normalized_cut_points(cut_point_count)
+        self.distance_to_base_array = self.__generate_cut_distances(normalized_cut_points)
 
     def draw_features(self) -> None:
         image = cv.cvtColor(self.image.copy(), cv.COLOR_GRAY2BGR)
@@ -149,14 +149,14 @@ class FragmentMetadata:
 
         return points
 
-    def __set_cut_edge(self):
+    def __generate_cut_edge(self) -> List[Tuple[int, int]]:
         cut_ends = set()
         for i in self.sides[0] + self.sides[1]:
             if i not in self.base_points:
                 cut_ends.add(self.approx[i])
 
         start_adding: bool = False
-        cut_side = []
+        cut_side: List[Tuple[int, int]] = []
 
         for point in self.contour:
             if start_adding:
@@ -167,14 +167,14 @@ class FragmentMetadata:
             elif point in cut_ends:
                 start_adding = True
 
-        self.cut_edge = cut_side
+        return cut_side
 
-    def __generate_cut_distances(self) -> np.array:
+    def __generate_cut_distances(self, normalized_cut_points) -> np.array:
         base_point_1 = self.contour[self.base_points[0]]
         base_point_2 = self.contour[self.base_points[1]]
 
         distance_matches = np.zeros(shape=(50,), dtype=np.int16)
-        for i, cut_point in enumerate(self.normalized_cut_points):
+        for i, cut_point in enumerate(normalized_cut_points):
             average_base_y = round(np.average([base_point_1[1], base_point_2[1]]))
             distance = average_base_y - cut_point[1]
             distance_matches[i] = distance
@@ -184,7 +184,7 @@ class FragmentMetadata:
 
 class Fragment:
     @staticmethod
-    def get_metadata(image: np.ndarray) -> FragmentMetadata:
+    def get_metadata(image: np.ndarray, cut_point_count: int = 50) -> FragmentMetadata:
         contour = find_contour(image)
 
         epsilon = 0.005 * cv.arcLength(contour, closed=True)
@@ -193,7 +193,7 @@ class Fragment:
         base = Fragment.__get_base_indices(approx)
         sides = Fragment.__get_sides(base, len(approx))
 
-        metadata = FragmentMetadata(base, sides, image, contour, approx)
+        metadata = FragmentMetadata(base, sides, image, contour, approx, cut_point_count)
 
         return metadata
 
