@@ -1,5 +1,4 @@
 import json
-import math
 import os
 from abc import ABC, abstractmethod
 from typing import Dict, List
@@ -10,7 +9,7 @@ import numpy as np
 from src.fragment import Fragment
 from src.fragment import FragmentMetadata
 from src.preprocessing import preprocess_image
-from numpy.linalg import norm
+
 
 class DatasetSolver(ABC):
     SHOW_IMAGES_ON_LOAD = False
@@ -59,8 +58,8 @@ class DatasetSolver(ABC):
         return instance
 
 
-class AngleGradientDatasetSolver(DatasetSolver):
-    VERBOSE = True
+class DistanceToBaseDatasetSolver(DatasetSolver):
+    VERBOSE = False
 
     def solve(self) -> float:
         metadata_list: List[FragmentMetadata] = []
@@ -74,36 +73,48 @@ class AngleGradientDatasetSolver(DatasetSolver):
                 print(metadata.gradient)
                 metadata.draw_features()
 
-        grade_matches: Dict[int, Dict[int, float]] = {}
-        for i in range(len(self.images) - 1):
-            grade_matches[i] = {}
-            gradient_1 = metadata_list[i].gradient
-            for j in range(i + 1, len(self.images)):
-                gradient_2 = metadata_list[j].gradient
-                grade_matches[i][j] = abs(gradient_1 + gradient_2)
+        distance_matches: Dict[int, np.array] = {}
+        for i, metadata in enumerate(metadata_list):
+            distance_matches[i] = np.zeros(shape=(50,), dtype=np.int16)
 
-        result = {}
-        for match in grade_matches:
-            match_dict = grade_matches[match]
+            base_point1 = metadata.contour[metadata.base_points[0]]
+            base_point2 = metadata.contour[metadata.base_points[1]]
 
-            match_keys = sorted(match_dict, key=match_dict.get)
+            for j, cut_point in enumerate(metadata.normalized_cut_points):
+                distance = self.__distance_to_base(base_point1, base_point2, cut_point)
+                distance_matches[i][j] = distance
+
+        match_scores: Dict[int, Dict[int, float]] = {i: {} for i in range(len(metadata_list))}
+        for i in range(len(metadata_list) - 1):
+            distances_1 = distance_matches[i]
+
+            for j in range(i + 1, len(metadata_list)):
+                distances_2 = distance_matches[j]
+                distance_sum = distances_1 + np.flip(distances_2)
+                average = np.average(distance_sum)
+                score_array = 1 - np.abs(distance_sum - average) / average
+                score = round(np.average(score_array), 4)
+
+                match_scores[i][j] = score
+                match_scores[j][i] = score
+
+        result: Dict[int, int] = {}
+        for dict_key in match_scores:
+            score_dict = match_scores[dict_key]
+
+            match_keys = sorted(score_dict, key=score_dict.get, reverse=True)
             for key in match_keys:
-                # if abs(metadata_1.normalized_cut_length - metadata_2.normalized_cut_length) > 0.06:
-                #     continue
-
-                if key not in result and match not in result:
-                    result[match] = key
-                    result[key] = match
+                if key not in result and dict_key not in result:
+                    result[dict_key] = key
+                    result[key] = dict_key
                     break
 
         if self.VERBOSE:
-            print(json.dumps(grade_matches, indent=1))
+            print(json.dumps(match_scores, indent=1))
             print(f"Correct : {self.correct}")
             print(f"Result : {result}")
-            print(grade_matches[1])
-            print(grade_matches[4])
 
-        score = 0
+        score: float = 0.0
         for result_key, correct_key in zip(sorted(result), self.correct):
             if result[result_key] == self.correct[correct_key]:
                 score += 1
@@ -113,52 +124,9 @@ class AngleGradientDatasetSolver(DatasetSolver):
 
     @staticmethod
     def load(directory: str) -> DatasetSolver:
-        return DatasetSolver._load_instance(AngleGradientDatasetSolver(), directory)
-
-
-class DistanceToBaseDatasetSolver(DatasetSolver):
-    VERBOSE = False
-
-    @staticmethod
-    def distance_to_base(base_point1, base_point2, cut_edge_point):
-        def distance(p0, p1):
-            return math.sqrt((p0[0] - p1[0]) ** 2 + (p0[1] - p1[1]) ** 2)
-
-        base_length = distance(base_point1, base_point2)
-        cut_to_base1 = distance(base_point1, cut_edge_point)
-        cut_to_base2 = distance(base_point2, cut_edge_point)
-        s = 0.5 * (base_length + cut_to_base1 + cut_to_base2)
-        area = math.sqrt(s * (s - base_length) * (s - cut_to_base1) * (s - cut_to_base2))
-        return (2*area)/base_length
-
-    def solve(self) -> float:
-
-        metadata_list: List[FragmentMetadata] = []
-        for i, image in enumerate(self.images):
-            metadata = Fragment.get_metadata(image)
-            metadata_list.append(metadata)
-
-        if self.VERBOSE:
-            for i, metadata in enumerate(metadata_list):
-                print(f"Fragment {i}")
-                print(metadata.gradient)
-                metadata.draw_features()
-
-        distances_matches: Dict[int, Dict[int, float]] = {}
-        for i, metadata in enumerate(metadata_list):
-            print(f"Fragment {i}")
-            distances_matches[i] = {}
-            base_point1 = metadata.contour[metadata.base[0]]
-            base_point2 = metadata.contour[metadata.base[1]]
-            j = 0
-            for cut_point in metadata.normalized_cut_points:
-                distance = self.distance_to_base(base_point1, base_point2, cut_point)
-                distances_matches[i][j] = round(distance, 2)
-                j += 1
-            print(distances_matches[i])
-
-        return round(1)
-
-    @staticmethod
-    def load(directory: str) -> DatasetSolver:
         return DatasetSolver._load_instance(DistanceToBaseDatasetSolver(), directory)
+
+    @staticmethod
+    def __distance_to_base(base_point_1, base_point_2, cut_edge_point) -> int:
+        average_base_y = round(np.average([base_point_1[1], base_point_2[1]]))
+        return average_base_y - cut_edge_point[1]

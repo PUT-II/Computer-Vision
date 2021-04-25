@@ -4,36 +4,32 @@ from typing import Tuple, List
 import cv2 as cv
 import numpy as np
 
-from src.utils import calculate_length, calculate_angles, find_contour
+from src.utils import calculate_distance, find_contour
 
 
 class FragmentMetadata:
-    base: Tuple[int, int]
+    base_points: Tuple[int, int]
     sides: Tuple[Tuple[int, int], Tuple[int, int]]
     image: np.ndarray
     contour: List[Tuple[int, int]]
     approx: List[Tuple[int, int]]
 
-    cut_angles: List[float]
     normalized_cut_length: float
-    normalized_cut_points: List[Tuple[int, int]] = []
+    normalized_cut_points: List[Tuple[int, int]]
 
     def __init__(self, base: Tuple[int, int], sides: tuple, image: np.ndarray, contour: np.ndarray, approx: np.ndarray):
-        self.base = base
+        self.base_points = base
         self.sides = sides
 
         self.approx = [tuple(point[0]) for point in approx]
         self.contour = [tuple(point[0]) for point in contour]
-        self.__shift_contour()
+        self.contour = self.__shift_contour()
 
         self.image = image
 
-        if len(self.approx) >= 4:
-            self.__set_cut_edge()
-            self.__set_normalized_cut_points(50)
-            self.__calculate_angle_gradient()
-        else:
-            self.gradient = 0.0
+        self.__set_cut_edge()
+        self.normalized_cut_points = self.__generate_normalized_cut_points(50)
+        self.distance_matches = self.__generate_cut_distances()
 
     def draw_features(self) -> None:
         image = cv.cvtColor(self.image.copy(), cv.COLOR_GRAY2BGR)
@@ -42,8 +38,8 @@ class FragmentMetadata:
             return
 
         # Draw base
-        base_start = self.approx[self.base[0]]
-        base_end = self.approx[self.base[1]]
+        base_start = self.approx[self.base_points[0]]
+        base_end = self.approx[self.base_points[1]]
         image = cv.line(image, base_start, base_end, (0, 0, 255), 2)
 
         # Draw sides
@@ -74,7 +70,7 @@ class FragmentMetadata:
 
         cut_ends = []
         for i in self.sides[0] + self.sides[1]:
-            if i not in self.base:
+            if i not in self.base_points:
                 cut_ends.append(self.approx[i])
         for point in cut_ends:
             img_copy = cv.line(img_copy, point, point, (0, 255, 0), 20)
@@ -91,18 +87,39 @@ class FragmentMetadata:
 
         cv.waitKey()
 
-    def __set_normalized_cut_points(self, gradient_size):
+    def __shift_contour(self) -> List[Tuple[int, int]]:
+        # Rotate approximated contour
+        approx_index = self.approx.index(self.approx[self.base_points[0]])
+        deque = collections.deque(self.approx)
+        rot_val = -approx_index
+        deque.rotate(rot_val)
+
+        # Correct base and side edges points
+        self.base_points = (
+            (self.base_points[0] + rot_val) % len(self.approx), (self.base_points[1] + rot_val) % len(self.approx))
+        side_1 = ((self.sides[0][0] + rot_val) % len(self.approx), (self.sides[0][1] + rot_val) % len(self.approx))
+        side_2 = ((self.sides[1][0] + rot_val) % len(self.approx), (self.sides[1][1] + rot_val) % len(self.approx))
+        self.sides = (side_1, side_2)
+        self.approx = list(deque)
+
+        # Rotate contour
+        cnt_index = self.contour.index(self.approx[self.base_points[0]])
+        deque = collections.deque(self.contour)
+        deque.rotate(-cnt_index)
+        return list(deque)
+
+    def __generate_normalized_cut_points(self, point_count) -> List[Tuple[int, int]]:
         cut_edge_points = self.cut_edge
         cut_edge_points = list(sorted(cut_edge_points, key=lambda point: point[0]))
 
         cut_ends = []
         for i in self.sides[0] + self.sides[1]:
-            if i not in self.base:
+            if i not in self.base_points:
                 cut_ends.append(self.approx[i])
 
         x_min: int = min(cut_ends, key=lambda point: point[0])[0]
         x_max: int = max(cut_ends, key=lambda point: point[0])[0]
-        step = (x_max - x_min) / gradient_size
+        step = (x_max - x_min) / point_count
 
         x = x_min - step
         points: List[Tuple[int, int]] = []
@@ -127,43 +144,15 @@ class FragmentMetadata:
             lin_b = first_point[1] - (lin_a * first_point[0])
             y = lin_a * x + lin_b
             points.append((int(round(x, 5)), int(round(y, 5))))
-            if len(points) >= gradient_size:
+            if len(points) >= point_count:
                 break
-        self.normalized_cut_points = points
 
-    def __calculate_angle_gradient(self):
-        points = self.normalized_cut_points
-        angles = calculate_angles(points)
-        gradient = np.array(angles, dtype=np.float)
-        if len(angles) != 0:
-            self.gradient = np.sum(gradient) / (360.0 * len(gradient))
-        else:
-            self.gradient = 0.0
-
-    def __shift_contour(self):
-        # Rotate approximated contour
-        approx_index = self.approx.index(self.approx[self.base[0]])
-        deque = collections.deque(self.approx)
-        rot_val = -approx_index
-        deque.rotate(rot_val)
-
-        # Correct base and side edges points
-        self.base = ((self.base[0] + rot_val) % len(self.approx), (self.base[1] + rot_val) % len(self.approx))
-        side_1 = ((self.sides[0][0] + rot_val) % len(self.approx), (self.sides[0][1] + rot_val) % len(self.approx))
-        side_2 = ((self.sides[1][0] + rot_val) % len(self.approx), (self.sides[1][1] + rot_val) % len(self.approx))
-        self.sides = (side_1, side_2)
-        self.approx = list(deque)
-
-        # Rotate contour
-        cnt_index = self.contour.index(self.approx[self.base[0]])
-        deque = collections.deque(self.contour)
-        deque.rotate(-cnt_index)
-        self.contour = list(deque)
+        return points
 
     def __set_cut_edge(self):
         cut_ends = set()
         for i in self.sides[0] + self.sides[1]:
-            if i not in self.base:
+            if i not in self.base_points:
                 cut_ends.add(self.approx[i])
 
         start_adding: bool = False
@@ -179,6 +168,18 @@ class FragmentMetadata:
                 start_adding = True
 
         self.cut_edge = cut_side
+
+    def __generate_cut_distances(self) -> np.array:
+        base_point_1 = self.contour[self.base_points[0]]
+        base_point_2 = self.contour[self.base_points[1]]
+
+        distance_matches = np.zeros(shape=(50,), dtype=np.int16)
+        for i, cut_point in enumerate(self.normalized_cut_points):
+            average_base_y = round(np.average([base_point_1[1], base_point_2[1]]))
+            distance = average_base_y - cut_point[1]
+            distance_matches[i] = distance
+
+        return distance_matches
 
 
 class Fragment:
@@ -202,7 +203,7 @@ class Fragment:
         result_length: float = 0.0
 
         for j in range(len(contour)):
-            length: float = calculate_length(contour[j][0], contour[(j + 1) % len(contour)][0])
+            length: float = calculate_distance(contour[j][0], contour[(j + 1) % len(contour)][0])
 
             if length > result_length:
                 result = j, (j + 1) % len(contour)
