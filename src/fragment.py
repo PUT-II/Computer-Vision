@@ -123,14 +123,16 @@ class FragmentMetadata:
 
         x = x_min - step
         points: List[Tuple[int, int]] = []
+        previous_point_index = 0
         while x <= x_max:
             x += step
-            first_point = next((point for point in cut_edge_points if point[0] >= x), None)
+            first_point = next((point for point in cut_edge_points[previous_point_index:] if point[0] >= x), None)
 
             if first_point is None:
                 break
 
-            second_point_index = cut_edge_points.index(first_point) + 1
+            previous_point_index = cut_edge_points.index(first_point)
+            second_point_index = previous_point_index + 1
 
             if second_point_index == len(cut_edge_points):
                 break

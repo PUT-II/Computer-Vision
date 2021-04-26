@@ -24,11 +24,6 @@ class DistanceToBaseDatasetSolver(DatasetSolver):
             metadata = Fragment.get_metadata(image)
             metadata_list.append(metadata)
 
-        if self.VERBOSE:
-            for i, metadata in enumerate(metadata_list):
-                print(f"Fragment {i}")
-                metadata.draw_features()
-
         match_scores: Dict[int, Dict[int, float]] = {i: {} for i in range(len(metadata_list))}
         for i in range(len(metadata_list) - 1):
             distances_1 = metadata_list[i].distance_to_base_array

@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Tuple
 
 import cv2 as cv
 import numpy as np
@@ -31,8 +31,3 @@ def find_contour(image: np.ndarray) -> np.ndarray:
 
     longest_contour = max(contours, key=lambda contour: len(contour))
     return longest_contour
-
-
-def find_contour_tuples(image: np.ndarray) -> List[Tuple[int, int]]:
-    contour = find_contour(image)
-    return [tuple(point[0]) for point in contour]

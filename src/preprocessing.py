@@ -11,15 +11,12 @@ def preprocess_image(image: np.ndarray) -> np.ndarray:
 
     # Rescale image
     res_img = __scale_image(res_img, 512)
-
     res_img = __add_padding(res_img, 256)
 
     # Get shape contours
     _, res_img = cv.threshold(res_img, 127, 255, cv.THRESH_BINARY)
-    contour = find_contour(res_img)
 
-    if len(contour) >= 4:
-        res_img = __rotate_image(res_img, contour)
+    res_img = __rotate_image(res_img)
 
     # Scale image so that at least one dimension is 512px and other lesser that 512px
     res_img = __scale_image(res_img, 512)
@@ -28,13 +25,13 @@ def preprocess_image(image: np.ndarray) -> np.ndarray:
     _, res_img = cv.threshold(res_img, 127, 255, cv.THRESH_BINARY)
     res_img = __add_padding(res_img, 32)
 
-    _, res_img = cv.threshold(res_img, 127, 255, cv.THRESH_BINARY)
-
     return res_img
 
 
-def __rotate_image(image: np.ndarray, contour: np.ndarray) -> np.ndarray:
+def __rotate_image(image: np.ndarray) -> np.ndarray:
     res_img = image.copy()
+
+    contour = find_contour(res_img)
 
     # Approximate contours to polygon
     epsilon = 0.005 * cv.arcLength(contour, closed=True)
