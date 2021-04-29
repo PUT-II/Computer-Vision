@@ -131,3 +131,6 @@ dmypy.json
 *.csv
 *.pdf
 .idea/*
+.idea/Computer-Vision.iml
+.idea/misc.xml
+.idea/runConfigurations/main.xml
