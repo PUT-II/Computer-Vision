@@ -1,3 +1,4 @@
+import os
 from typing import List
 
 import numpy as np
@@ -25,7 +26,8 @@ def get_datasets_scores(solver: DatasetSolver, datasets: List[Dataset]) -> List[
 
 
 def main():
-    Dataset.VERBOSE = False
+    print(os.getcwd())
+    DatasetSolver.VERBOSE = False
     Dataset.SHOW_IMAGES_ON_LOAD = False
 
     dataset_name: str = "A"

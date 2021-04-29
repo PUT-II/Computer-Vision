@@ -29,10 +29,7 @@ class DistanceToBaseDatasetSolver(DatasetSolver):
         for i in range(len(metadata_list) - 1):
             distances_1 = metadata_list[i].distance_to_base_array
 
-            for j in range(len(metadata_list)):
-                if i == j:
-                    continue
-
+            for j in range(i + 1, len(metadata_list)):
                 distances_2 = metadata_list[j].distance_to_base_array
                 distance_sum = distances_1 + np.flip(distances_2)
                 average = np.average(distance_sum)

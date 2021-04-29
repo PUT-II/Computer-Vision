@@ -9,6 +9,14 @@ from src.solvers import DistanceToBaseDatasetSolver
 
 
 def main():
+    if len(sys.argv) < 2:
+        print("Missing path and image count arguments")
+        return
+
+    if len(sys.argv) < 3:
+        print("Missing image count argument")
+        return
+
     set_path: str = sys.argv[1]
     image_count = int(sys.argv[2])
 

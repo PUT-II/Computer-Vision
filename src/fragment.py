@@ -14,6 +14,7 @@ class FragmentMetadata:
     __image: np.ndarray
     __contour: List[Tuple[int, int]]
     __approx: List[Tuple[int, int]]
+    __normalized_cut_points: List[Tuple[int, int]]
 
     distance_to_base_array: np.array
 
@@ -30,8 +31,8 @@ class FragmentMetadata:
 
         self.__cut_edge = self.__generate_cut_edge()
         if cut_point_count > 0:
-            normalized_cut_points = self.__generate_normalized_cut_points(cut_point_count)
-            self.distance_to_base_array = self.__generate_cut_distances(normalized_cut_points)
+            self.__normalized_cut_points = self.__generate_normalized_cut_points(cut_point_count)
+            self.distance_to_base_array = self.__generate_cut_distances(self.__normalized_cut_points)
 
     def get_side_points(self) -> tuple:
         side_1, side_2 = self.__sides
@@ -67,14 +68,14 @@ class FragmentMetadata:
         image = cv.line(image, cut_point_start, cut_point_start, (0, 255, 0), 9)
         image = cv.line(image, cut_point_end, cut_point_end, (0, 255, 0), 9)
 
-        cv.imshow("test", image)
+        cv.imshow("features", image)
 
         img_copy = cv.cvtColor(self.__image.copy(), cv.COLOR_GRAY2BGR)
-        for point in self.__approx:
-            img_copy = cv.line(img_copy, point, point, (0, 0, 255), 6)
-
         # Draw contour direction
         img_copy = cv.arrowedLine(img_copy, self.__approx[0], self.__approx[1], (0, 255, 255), 3)
+
+        for point in self.__approx:
+            img_copy = cv.line(img_copy, point, point, (0, 0, 255), 6)
 
         cut_ends = []
         for i in self.__sides[0] + self.__sides[1]:
@@ -83,7 +84,13 @@ class FragmentMetadata:
         for point in cut_ends:
             img_copy = cv.line(img_copy, point, point, (0, 255, 0), 20)
 
-        cv.imshow("test-orig", img_copy)
+        cv.imshow("features-orig", img_copy)
+
+        img_copy = cv.cvtColor(self.__image.copy(), cv.COLOR_GRAY2BGR)
+        for point in self.__normalized_cut_points:
+            img_copy = cv.line(img_copy, point, point, (0, 0, 255), 6)
+
+        cv.imshow("features-normalized-points", img_copy)
 
         img_copy = cv.cvtColor(self.__image.copy(), cv.COLOR_GRAY2BGR)
         for point in self.__contour:
@@ -91,9 +98,10 @@ class FragmentMetadata:
 
         # Draw contour direction
         img_copy = cv.arrowedLine(img_copy, self.__contour[0], self.__approx[1], (0, 255, 255), 3)
-        cv.imshow("test-orig-full", img_copy)
+        cv.imshow("features-orig-full", img_copy)
 
         cv.waitKey()
+        cv.destroyAllWindows()
 
     def __shift_contour(self) -> List[Tuple[int, int]]:
         # Rotate approximated contour
