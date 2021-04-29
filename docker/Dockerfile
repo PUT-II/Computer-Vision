@@ -1,11 +1,21 @@
-LABEL student1="Tomasz Kiljańczyk" student2="Michał Kalinowski"
 FROM python:3.7
+LABEL student1="Tomasz Kiljańczyk" student2="Michał Kalinowski"
 
 COPY ./src ./app/src
 COPY ./requirements.txt ./app/requirements.txt
 
-ENV PYTHONPATH "${PYTHONPATH}:/app/src/"
-RUN pip install -r requirements.txt
+# Download updates and necessary libs
+RUN apt-get update
+RUN apt-get install ffmpeg libsm6 libxext6 -y
 
-EXPOSE 5001
-ENTRYPOINT ["python", "./docker_main.py"]
+# Install all dependencies
+RUN pip install -r ./app/requirements.txt
+
+# Set work dir to app directory
+WORKDIR "./app/"
+
+# Set python root
+ENV PYTHONPATH "${PYTHONPATH}:/app/"
+
+# Entrypoint for docker run
+ENTRYPOINT ["python", "./src/docker_main.py"]

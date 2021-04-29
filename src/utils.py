@@ -4,19 +4,19 @@ import cv2 as cv
 import numpy as np
 
 
-def get_longest_line_points(contour) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+def get_base(approx) -> Tuple[Tuple[int, int], Tuple[int, int]]:
     """ Finds longest line in contour
 
-    :param contour:
+    :param approx:
     :return: Tuple with start and end point of line
     """
     result: Tuple[Tuple[int, int], Tuple[int, int]] = ((0, 1), (1, 2))
     result_length: float = 0.0
 
-    for j in range(-1, len(contour) - 1):
-        length: float = calculate_distance(contour[j][0], contour[j + 1][0])
+    for j in range(-1, len(approx) - 1):
+        length: float = calculate_distance(approx[j][0], approx[j + 1][0])
         if length > result_length:
-            result = contour[j][0], contour[j + 1][0]
+            result = approx[j][0], approx[j + 1][0]
             result_length = length
 
     return tuple(result[0]), tuple(result[1])

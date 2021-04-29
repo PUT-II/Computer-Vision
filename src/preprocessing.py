@@ -3,7 +3,7 @@ import math
 import cv2 as cv
 import numpy as np
 
-from src.utils import get_longest_line_points, find_contour
+from src.utils import get_base, find_contour
 
 
 def preprocess_image(image: np.ndarray) -> np.ndarray:
@@ -38,8 +38,9 @@ def __rotate_image(image: np.ndarray) -> np.ndarray:
     approx = cv.approxPolyDP(contour, epsilon, closed=True)
 
     # Find longest line and straighten image
-    start_point, end_point = get_longest_line_points(approx)
-    angle = math.atan2((end_point[1] - start_point[1]), (end_point[0] - start_point[0])) * (180.0 / math.pi)
+    base_point_1, base_point_2 = get_base(approx)
+
+    angle = math.atan2((base_point_2[1] - base_point_1[1]), (base_point_2[0] - base_point_1[0])) * (180.0 / math.pi)
     angle %= 180.0
 
     moments = cv.moments(contour)
@@ -66,15 +67,16 @@ def __rotate_side_to_bottom(image: np.ndarray) -> np.ndarray:
     # Approximate contours to polygon
     epsilon = 0.005 * cv.arcLength(contour, closed=True)
     approx = cv.approxPolyDP(contour, epsilon, closed=True)
-    start_point, end_point = get_longest_line_points(approx)
 
-    base_correct: bool = abs(start_point[1] + end_point[1]) / (2 * res_img.shape[0]) > 0.7
+    base_point_1, base_point_2 = get_base(approx)
+
+    base_correct: bool = abs(base_point_1[1] + base_point_2[1]) / (2 * res_img.shape[0]) > 0.7
     if base_correct:
         return res_img
 
-    base_side: bool = abs(start_point[1] - end_point[1]) / res_img.shape[0] > 0.2
-    base_left: bool = abs(start_point[0] - end_point[0]) / res_img.shape[1] > 0.2
-    base_top: bool = abs(start_point[1] + end_point[1]) / (2 * res_img.shape[0]) < 0.2
+    base_side: bool = abs(base_point_1[1] - base_point_2[1]) / res_img.shape[0] > 0.2
+    base_left: bool = abs(base_point_1[0] - base_point_2[0]) / res_img.shape[1] < 0.2
+    base_top: bool = abs(base_point_1[1] + base_point_2[1]) / (2 * res_img.shape[0]) < 0.2
 
     if base_top:
         rot_angle = 180.0

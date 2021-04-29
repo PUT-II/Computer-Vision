@@ -1,0 +1,6 @@
+venv/
+datasets/
+
+.gitignore
+LICENCE
+README.md

@@ -10,13 +10,14 @@ from src.fragment import FragmentMetadataProvider
 
 
 class DatasetSolver(ABC):
+    VERBOSE = False
+
     @abstractmethod
     def solve(self, dataset: Dataset) -> List[Tuple[int, List[int]]]:
         pass
 
 
 class DistanceToBaseDatasetSolver(DatasetSolver):
-    VERBOSE = False
 
     def solve(self, dataset: Dataset) -> List[Tuple[int, List[int]]]:
         metadata_list: List[FragmentMetadata] = []
@@ -46,9 +47,9 @@ class DistanceToBaseDatasetSolver(DatasetSolver):
             score_dict = distance_scores[key]
 
             match_keys = sorted(score_dict, key=score_dict.get, reverse=True)
-            result.append((key, list(match_keys)))
+            result.append((key, match_keys))
 
-        if self.VERBOSE:
+        if DatasetSolver.VERBOSE:
             for metadata in metadata_list:
                 metadata.draw_features()
 

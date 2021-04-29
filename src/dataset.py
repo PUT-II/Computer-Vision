@@ -8,7 +8,7 @@ from src.preprocessing import preprocess_image
 
 
 class Dataset:
-    __SHOW_IMAGES_ON_LOAD = False
+    SHOW_IMAGES_ON_LOAD = False
     images: List[np.ndarray]
     correct: Dict[int, int]
 
@@ -39,7 +39,7 @@ class Dataset:
             img: np.ndarray = cv.imread(file_path, cv.IMREAD_GRAYSCALE)
             img = preprocess_image(img)
 
-            if Dataset.__SHOW_IMAGES_ON_LOAD:
+            if Dataset.SHOW_IMAGES_ON_LOAD:
                 print(file_path)
                 cv.imshow("test", img)
                 cv.waitKey()

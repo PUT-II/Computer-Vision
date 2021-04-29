@@ -25,6 +25,9 @@ def get_datasets_scores(solver: DatasetSolver, datasets: List[Dataset]) -> List[
 
 
 def main():
+    Dataset.VERBOSE = False
+    Dataset.SHOW_IMAGES_ON_LOAD = False
+
     dataset_name: str = "A"
     dataset_size: int = 9
     dataset_start_index: int = 0
