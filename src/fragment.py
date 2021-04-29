@@ -131,7 +131,7 @@ class FragmentMetadata:
             if first_point is None:
                 break
 
-            previous_point_index = cut_edge_points.index(first_point)
+            previous_point_index = cut_edge_points.index(first_point, previous_point_index)
             second_point_index = previous_point_index + 1
 
             if second_point_index == len(cut_edge_points):
@@ -145,7 +145,7 @@ class FragmentMetadata:
                 lin_a = 1.0
             lin_b = first_point[1] - (lin_a * first_point[0])
             y = lin_a * x + lin_b
-            points.append((int(round(x, 5)), int(round(y, 5))))
+            points.append((int(round(x)), int(round(y))))
             if len(points) >= point_count:
                 break
 
@@ -184,7 +184,7 @@ class FragmentMetadata:
         return distance_matches
 
 
-class Fragment:
+class FragmentMetadataProvider:
     @staticmethod
     def get_metadata(image: np.ndarray, cut_point_count: int = 50) -> FragmentMetadata:
         contour = find_contour(image)
@@ -192,8 +192,8 @@ class Fragment:
         epsilon = 0.005 * cv.arcLength(contour, closed=True)
         approx = cv.approxPolyDP(contour, epsilon, closed=True)
 
-        base = Fragment.__get_base_indices(approx)
-        sides = Fragment.__get_sides(base, len(approx))
+        base = FragmentMetadataProvider.__get_base_indices(approx)
+        sides = FragmentMetadataProvider.__get_sides(base, len(approx))
 
         metadata = FragmentMetadata(base, sides, image, contour, approx, cut_point_count)
 

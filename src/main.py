@@ -9,7 +9,14 @@ from src.solvers import DatasetSolver, DistanceToBaseDatasetSolver
 def get_datasets_scores(solver: DatasetSolver, datasets: List[Dataset]) -> List[float]:
     scores: List[float] = list()
     for dataset in datasets:
-        scores.append(solver.solve(dataset))
+        all_matches = solver.solve(dataset)
+        score: float = 0.0
+        for matches in all_matches:
+            for i, match in enumerate(matches[1]):
+                if match == dataset.correct[matches[0]]:
+                    score += 1 / (i + 1)
+        score /= len(dataset.correct)
+        scores.append(round(score, 4))
 
     print(scores)
     print(round(np.average(scores), 4))

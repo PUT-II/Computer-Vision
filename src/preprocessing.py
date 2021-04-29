@@ -29,7 +29,7 @@ def preprocess_image(image: np.ndarray) -> np.ndarray:
 
 
 def __rotate_image(image: np.ndarray) -> np.ndarray:
-    res_img = image.copy()
+    res_img = image
 
     contour = find_contour(res_img)
 
@@ -59,7 +59,7 @@ def __rotate_image(image: np.ndarray) -> np.ndarray:
 
 
 def __rotate_side_to_bottom(image: np.ndarray) -> np.ndarray:
-    res_img: np.ndarray = image.copy()
+    res_img: np.ndarray = image
 
     contour = find_contour(res_img)
 
@@ -102,7 +102,7 @@ def __add_padding(image: np.ndarray, pad_size: int) -> np.ndarray:
 
 
 def __cut_empty_padding(image: np.ndarray) -> np.ndarray:
-    res_img = image.copy()
+    res_img = image
 
     # Cut black padding from image
     contour = find_contour(image)
@@ -113,7 +113,7 @@ def __cut_empty_padding(image: np.ndarray) -> np.ndarray:
 
 
 def __scale_image(image: np.ndarray, max_size: int) -> np.ndarray:
-    res_img = image.copy()
+    res_img = image
     img_h, img_w = res_img.shape
     scale_x = img_w / max_size
     scale_y = img_h / max_size
